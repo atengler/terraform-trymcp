@@ -1,0 +1,6 @@
+# env file with local variables
+env.sh
+
+# Terraform files
+terraform.tfstate*
+.terraform/
