@@ -1,6 +1,6 @@
 variable "cluster_name" {
   description = "Name of the cluster, used as prefix for all names"
-  default     = "trymcp"
+  default     = "try-mcp"
 }
 
 variable "openstack_auth_url" {
@@ -25,7 +25,7 @@ variable "openstack_availability_zone" {
 }
 
 variable "trymcp_drivetrain_flavor_name" {
-  description = "Name of cfg flavor in OpenStack"
+  description = "Name of Cfg01 flavor in OpenStack"
   default = "os_ha_ctl"
 }
 
@@ -35,12 +35,12 @@ variable "trymcp_aio_flavor_name" {
 }
 
 variable "trymcp_drivetrain_image_name" {
-  description = "Image name for cfg VMs in OpenStack"
+  description = "Image name for Cfg01(DriveTrain) VM"
   default = "trymcp-almost"
 }
 
 variable "trymcp_aio_image_name" {
-  description = "Image name for aio VMs in OpenStack"
+  description = "Image name for OpenStack VM"
   default = "ubuntu-16-04-x64-201804032121"
 }
 
@@ -69,7 +69,7 @@ variable "openstack_networking_floatingip" {
 }
 
 variable "domain" {
-  default = "trymcp.local"
+  default = "try-mcp.local"
 }
 
 variable "username" {
