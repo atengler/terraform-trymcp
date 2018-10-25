@@ -9,7 +9,7 @@ provider "openstack" {
 # Create Keypair
 resource "openstack_compute_keypair_v2" "keypair" {
   name       = "${var.cluster_name}-keypair"
-  public_key = "${file(var.openstack_compute_keypair_public_key)}"
+  public_key = "${file(var.keypair_public_key)}"
 }
 
 # Create Security Group
@@ -75,20 +75,20 @@ resource "openstack_networking_floatingip_v2" "floatingip_drivetrain" {
   pool  = "${var.openstack_networking_floatingip}"
 }
 
-# Create floating IP for OS AIO node
-resource "openstack_networking_floatingip_v2" "floatingip_os_aio" {
+# Create floating IP for AIO node
+resource "openstack_networking_floatingip_v2" "floatingip_aio" {
   pool  = "${var.openstack_networking_floatingip}"
 }
 
 # Create Drivetrain node
 resource "openstack_compute_instance_v2" "vm_drivetrain" {
-  name              = "${format("cid.%s", var.domain)}"
+  name              = "${format("cfg01.%s", var.domain)}"
   image_name        = "${var.trymcp_drivetrain_image_name}"
   flavor_name       = "${var.trymcp_drivetrain_flavor_name}"
   availability_zone = "${var.openstack_availability_zone}"
   key_pair          = "${openstack_compute_keypair_v2.keypair.name}"
   security_groups   = ["${openstack_compute_secgroup_v2.secgroup.name}"]
-  user_data         = "#cloud-config\nusers:\n  - name: ubuntu\n    ssh_authorized_keys:\n      - ${file(var.openstack_compute_keypair_public_key)}"
+  user_data         = "#cloud-config\nusers:\n  - name: ubuntu\n    ssh_authorized_keys:\n      - ${file(var.keypair_public_key)}"
   depends_on        = ["openstack_networking_router_interface_v2.router-interface"]
 
   network {
@@ -98,15 +98,15 @@ resource "openstack_compute_instance_v2" "vm_drivetrain" {
   }
 }
 
-# Create OS AIO node
-resource "openstack_compute_instance_v2" "vm_os_aio" {
-  name              = "${format("cmp.%s", var.domain)}"
-  image_name        = "${var.trymcp_os_aio_image_name}"
-  flavor_name       = "${var.trymcp_os_aio_flavor_name}"
+# Create AIO node
+resource "openstack_compute_instance_v2" "vm_aio" {
+  name              = "${format("aio01.%s", var.domain)}"
+  image_name        = "${var.trymcp_aio_image_name}"
+  flavor_name       = "${var.trymcp_aio_flavor_name}"
   availability_zone = "${var.openstack_availability_zone}"
   key_pair          = "${openstack_compute_keypair_v2.keypair.name}"
   security_groups   = ["${openstack_compute_secgroup_v2.secgroup.name}"]
-  user_data         = "#cloud-config\nusers:\n  - name: ubuntu\n    ssh_authorized_keys:\n      - ${file(var.openstack_compute_keypair_public_key)}"
+  user_data         = "#cloud-config\nusers:\n  - name: ubuntu\n    ssh_authorized_keys:\n      - ${file(var.keypair_public_key)}"
   depends_on        = ["openstack_networking_router_interface_v2.router-interface"]
 
   network {
@@ -117,22 +117,52 @@ resource "openstack_compute_instance_v2" "vm_os_aio" {
 }
 
 # Associate floating IP with Drivetrain node
-resource "openstack_compute_floatingip_associate_v2" "floatingip-associate_drivetrain" {
+resource "openstack_compute_floatingip_associate_v2" "floatingip_drivetrain" {
   floating_ip = "${openstack_networking_floatingip_v2.floatingip_drivetrain.address}"
   instance_id = "${openstack_compute_instance_v2.vm_drivetrain.id}"
 }
 
-# Associate floating IP with OS AIO nodes
-resource "openstack_compute_floatingip_associate_v2" "floatingip-associate_os_aio" {
-  floating_ip = "${openstack_networking_floatingip_v2.floatingip_os_aio.address}"
-  instance_id = "${openstack_compute_instance_v2.vm_os_aio.id}"
+# Associate floating IP with AIO nodes
+resource "openstack_compute_floatingip_associate_v2" "floatingip_aio" {
+  floating_ip = "${openstack_networking_floatingip_v2.floatingip_aio.address}"
+  instance_id = "${openstack_compute_instance_v2.vm_aio.id}"
 }
 
-output "vms_name" {
-  value = ["${openstack_compute_instance_v2.vm_drivetrain.name}", "${openstack_compute_instance_v2.vm_os_aio.name}"]
+# Connect Salt minion on AIO node
+resource "null_resource" "bootstrap_aio" {
+  depends_on = ["openstack_compute_floatingip_associate_v2.floatingip_aio"]
+
+  connection {
+    type        = "ssh"
+    user        = "ubuntu"
+    private_key = "${file(var.keypair_private_key)}"
+    host        = "${openstack_networking_floatingip_v2.floatingip_aio.address}"
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "sudo sh -c \"echo 'master: ${openstack_compute_instance_v2.vm_drivetrain.network.0.fixed_ip_v4}' >> /etc/salt/minion\"",
+      "sudo service salt-minion restart"
+    ]
+  }
 }
 
-output "vms_public_ip" {
-  description = "The public IP address for VMs"
-  value       = ["${openstack_networking_floatingip_v2.floatingip_drivetrain.address}", "${openstack_networking_floatingip_v2.floatingip_os_aio.address}"]
+output "drivetrain_internal_ip" {
+  description = "Drivetrain internal IP address"
+  value = "${openstack_compute_instance_v2.vm_drivetrain.network.0.fixed_ip_v4}"
+}
+
+output "drivetrain_external_ip" {
+  description = "Drivetrain external IP address"
+  value = "${openstack_networking_floatingip_v2.floatingip_drivetrain.address}"
+}
+
+output "aio_internal_ip" {
+  description = "AIO internal IP address"
+  value = "${openstack_compute_instance_v2.vm_aio.network.0.fixed_ip_v4}"
+}
+
+output "aio_external_ip" {
+  description = "AIO external IP address"
+  value = "${openstack_networking_floatingip_v2.floatingip_aio.address}"
 }

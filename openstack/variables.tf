@@ -25,27 +25,31 @@ variable "openstack_availability_zone" {
 }
 
 variable "trymcp_drivetrain_flavor_name" {
-  description = "Name of kvm flavor in OpenStack"
-  default = "m1.xlarge40"
+  description = "Name of cfg flavor in OpenStack"
+  default = "os_ha_ctl"
 }
 
-variable "trymcp_os_aio_flavor_name" {
-  description = "Name of cmp flavor in OpenStack"
+variable "trymcp_aio_flavor_name" {
+  description = "Name of aio flavor in OpenStack"
   default = "m1.xlarge40"
 }
 
 variable "trymcp_drivetrain_image_name" {
-  description = "Image name for kvm01 VMs in OpenStack"
+  description = "Image name for cfg VMs in OpenStack"
+  default = "trymcp-almost"
+}
+
+variable "trymcp_aio_image_name" {
+  description = "Image name for aio VMs in OpenStack"
   default = "ubuntu-16-04-x64-201804032121"
 }
 
-variable "trymcp_os_aio_image_name" {
-  description = "Image name for kvm VMs in OpenStack"
-  default = "ubuntu-16-04-x64-201804032121"
-}
-
-variable "openstack_compute_keypair_public_key" {
+variable "keypair_public_key" {
   default = "~/.ssh/id_rsa.pub"
+}
+
+variable "keypair_private_key" {
+  default = "~/.ssh/id_rsa"
 }
 
 variable "openstack_networking_network_external_network_name" {
@@ -65,7 +69,7 @@ variable "openstack_networking_floatingip" {
 }
 
 variable "domain" {
-  default = "trymcp.com"
+  default = "trymcp.local"
 }
 
 variable "username" {
