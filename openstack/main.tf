@@ -142,6 +142,7 @@ resource "null_resource" "bootstrap_aio" {
   provisioner "remote-exec" {
     inline = [
       "sudo sh -c \"echo 'master: ${openstack_compute_instance_v2.vm_drivetrain.network.0.fixed_ip_v4}' >> /etc/salt/minion\"",
+      "sudo sh -c \"echo 'id: ${openstack_compute_instance_v2.vm_aio.name}' >> /etc/salt/minion\"",
       "sudo service salt-minion restart"
     ]
   }
