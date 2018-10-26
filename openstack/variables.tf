@@ -45,11 +45,11 @@ variable "trymcp_aio_image_name" {
 }
 
 variable "keypair_public_key" {
-  default = "~/.ssh/id_rsa.pub"
+  default = "./id_rsa.pub"
 }
 
 variable "keypair_private_key" {
-  default = "~/.ssh/id_rsa"
+  default = "./id_rsa"
 }
 
 variable "openstack_networking_network_external_network_name" {

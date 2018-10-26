@@ -128,22 +128,40 @@ resource "openstack_compute_floatingip_associate_v2" "floatingip_aio" {
   instance_id = "${openstack_compute_instance_v2.vm_aio.id}"
 }
 
+# Wait for Drivetrain node cloud-init
+resource "null_resource" "wait_drivetrain" {
+  depends_on = ["openstack_compute_instance_v2.vm_drivetrain"]
+
+  connection {
+    type        = "ssh"
+    user        = "root"
+    private_key = "${file(var.keypair_private_key)}"
+    host        = "${openstack_networking_floatingip_v2.floatingip_drivetrain.address}"
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "while [ ! -f /var/lib/cloud/instance/boot-finished ]; do echo 'waiting for boot-finished'; sleep 5; done;",
+    ]
+  }
+}
+
 # Connect Salt minion on AIO node
 resource "null_resource" "bootstrap_aio" {
   depends_on = ["openstack_compute_floatingip_associate_v2.floatingip_aio"]
 
   connection {
     type        = "ssh"
-    user        = "ubuntu"
+    user        = "root"
     private_key = "${file(var.keypair_private_key)}"
     host        = "${openstack_networking_floatingip_v2.floatingip_aio.address}"
   }
 
   provisioner "remote-exec" {
     inline = [
-      "sudo sh -c \"echo 'master: ${openstack_compute_instance_v2.vm_drivetrain.network.0.fixed_ip_v4}' >> /etc/salt/minion\"",
-      "sudo sh -c \"echo 'id: ${openstack_compute_instance_v2.vm_aio.name}' >> /etc/salt/minion\"",
-      "sudo service salt-minion restart"
+      "echo 'master: ${openstack_compute_instance_v2.vm_drivetrain.network.0.fixed_ip_v4}' >> /etc/salt/minion",
+      "echo 'id: ${openstack_compute_instance_v2.vm_aio.name}' >> /etc/salt/minion",
+      "service salt-minion restart",
     ]
   }
 }
