@@ -36,7 +36,7 @@ variable "trymcp_aio_flavor_name" {
 
 variable "trymcp_drivetrain_image_name" {
   description = "Image name for Cfg01(DriveTrain) VM"
-  default = "trymcp-almost"
+  default = "trymcp"
 }
 
 variable "trymcp_aio_image_name" {
