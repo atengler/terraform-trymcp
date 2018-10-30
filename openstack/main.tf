@@ -142,7 +142,7 @@ resource "null_resource" "wait_drivetrain" {
   provisioner "remote-exec" {
     inline = [
       "while [ ! -f /var/lib/cloud/instance/boot-finished ]; do echo 'waiting for boot-finished'; sleep 5; done;",
-      "salt-call reclass.cluster_meta_set node01_external_address ${openstack_networking_floatingip_v2.floatingip_drivetrain.address} overrides.yml try-mcp",
+      "salt-call reclass.cluster_meta_set cluster_public_host ${openstack_networking_floatingip_v2.floatingip_drivetrain.address} overrides.yml try-mcp",
       "salt-call state.apply docker.client"
     ]
   }
