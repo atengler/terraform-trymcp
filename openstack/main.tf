@@ -128,9 +128,9 @@ resource "openstack_compute_floatingip_associate_v2" "floatingip_aio" {
   instance_id = "${openstack_compute_instance_v2.vm_aio.id}"
 }
 
-# Wait for Drivetrain node cloud-init
+# Wait for Drivetrain node cloud-init and set the extrnal address
 resource "null_resource" "wait_drivetrain" {
-  depends_on = ["openstack_compute_instance_v2.vm_drivetrain"]
+  depends_on = ["openstack_compute_floatingip_associate_v2.floatingip_drivetrain"]
 
   connection {
     type        = "ssh"
@@ -142,13 +142,18 @@ resource "null_resource" "wait_drivetrain" {
   provisioner "remote-exec" {
     inline = [
       "while [ ! -f /var/lib/cloud/instance/boot-finished ]; do echo 'waiting for boot-finished'; sleep 5; done;",
+      "salt-call reclass.cluster_meta_set node01_external_address ${openstack_networking_floatingip_v2.floatingip_drivetrain.address} overrides.yml try-mcp",
+      "salt-call state.apply docker.client"
     ]
   }
 }
 
 # Connect Salt minion on AIO node
 resource "null_resource" "bootstrap_aio" {
-  depends_on = ["openstack_compute_floatingip_associate_v2.floatingip_aio"]
+  depends_on = [
+    "openstack_compute_floatingip_associate_v2.floatingip_aio",
+    "null_resource.wait_drivetrain"
+  ]
 
   connection {
     type        = "ssh"
@@ -159,6 +164,8 @@ resource "null_resource" "bootstrap_aio" {
 
   provisioner "remote-exec" {
     inline = [
+      "echo 'deb [arch=amd64] http://mirror.mirantis.com/stable//saltstack-2017.7//xenial xenial main' > /etc/apt/sources.list.d/mcp_saltstack.list",
+      "apt update && apt install salt-minion -y",
       "echo 'master: ${openstack_compute_instance_v2.vm_drivetrain.network.0.fixed_ip_v4}' >> /etc/salt/minion",
       "echo 'id: ${openstack_compute_instance_v2.vm_aio.name}' >> /etc/salt/minion",
       "service salt-minion restart",
@@ -166,22 +173,21 @@ resource "null_resource" "bootstrap_aio" {
   }
 }
 
-output "drivetrain_internal_ip" {
-  description = "Drivetrain internal IP address"
-  value = "${openstack_compute_instance_v2.vm_drivetrain.network.0.fixed_ip_v4}"
+output "IP addresses" {
+  value = [
+    "Drivetrain internal IP: ${openstack_compute_instance_v2.vm_drivetrain.network.0.fixed_ip_v4}",
+    "Drivetrain external IP: ${openstack_networking_floatingip_v2.floatingip_drivetrain.address}",
+    "All-in-one internal IP: ${openstack_compute_instance_v2.vm_aio.network.0.fixed_ip_v4}",
+    "All-in-one external IP: ${openstack_networking_floatingip_v2.floatingip_drivetrain.address}"
+  ]
 }
 
-output "drivetrain_external_ip" {
-  description = "Drivetrain external IP address"
-  value = "${openstack_networking_floatingip_v2.floatingip_drivetrain.address}"
-}
-
-output "aio_internal_ip" {
-  description = "AIO internal IP address"
-  value = "${openstack_compute_instance_v2.vm_aio.network.0.fixed_ip_v4}"
-}
-
-output "aio_external_ip" {
-  description = "AIO external IP address"
-  value = "${openstack_networking_floatingip_v2.floatingip_aio.address}"
+output "Service endpoints" {
+  value = [
+    "Operations UI: http://${openstack_networking_floatingip_v2.floatingip_drivetrain.address}:3020",
+    "Operations API: http://${openstack_networking_floatingip_v2.floatingip_drivetrain.address}:8002",
+    "Jenkins: http://${openstack_networking_floatingip_v2.floatingip_drivetrain.address}:8081",
+    "Gerrit: http://${openstack_networking_floatingip_v2.floatingip_drivetrain.address}:8080",
+    "Keycloak: http://${openstack_networking_floatingip_v2.floatingip_drivetrain.address}:8078"
+  ]
 }
