@@ -178,7 +178,7 @@ output "IP addresses" {
     "Drivetrain internal IP: ${openstack_compute_instance_v2.vm_drivetrain.network.0.fixed_ip_v4}",
     "Drivetrain external IP: ${openstack_networking_floatingip_v2.floatingip_drivetrain.address}",
     "All-in-one internal IP: ${openstack_compute_instance_v2.vm_aio.network.0.fixed_ip_v4}",
-    "All-in-one external IP: ${openstack_networking_floatingip_v2.floatingip_drivetrain.address}"
+    "All-in-one external IP: ${openstack_networking_floatingip_v2.floatingip_aio.address}"
   ]
 }
 

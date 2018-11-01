@@ -36,7 +36,7 @@ variable "trymcp_aio_flavor_name" {
 
 variable "trymcp_drivetrain_image_name" {
   description = "Image name for Cfg01(DriveTrain) VM"
-  default = "trymcp-day01-nightly-30102018-121319"
+  default = "trymcp-day01-nightly-01112018-091142"
 }
 
 variable "trymcp_aio_image_name" {
